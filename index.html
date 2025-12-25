@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Anonymous Vent</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+:root{
+  --bg:#0e0f13;
+  --text:#e6e7eb;
+  --muted:#9aa0aa;
+  --primary:#6c8cff;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:system-ui,-apple-system,Segoe UI,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  overflow-x:hidden;
+}
+
+/* FADE LAYER */
+.fade{
+  position:fixed;
+  inset:0;
+  background:#000;
+  opacity:0;
+  pointer-events:none;
+  transition:.6s ease;
+  z-index:99;
+}
+.fade.show{opacity:1}
+
+/* SECTIONS */
+section{
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  padding:120px 24px;
+}
+.scene{
+  max-width:900px;
+  margin:auto;
+  opacity:0;
+  transform:translateY(60px);
+  filter:blur(10px);
+  transition:all 1.2s cubic-bezier(.19,1,.22,1);
+}
+.scene.show{
+  opacity:1;
+  transform:none;
+  filter:blur(0);
+}
+
+/* CTA */
+button{
+  padding:16px 36px;
+  font-size:16px;
+  border-radius:40px;
+  border:none;
+  background:var(--primary);
+  color:#fff;
+  cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+<div class="fade" id="fade"></div>
+
+<section>
+  <div class="scene" id="hero">
+    <h1></h1>
+    <p></p>
+  </div>
+</section>
+
+<section>
+  <div class="scene">
+    <p style="font-size:22px">
+      Not everything needs to be shared.<br><br>
+      Some things just need to be written.
+    </p>
+  </div>
+</section>
+
+<section>
+  <div class="scene">
+    <p>🔒 Everything stays on your device</p>
+    <p>👤 No account. Ever.</p>
+    <p>👀 No one is watching</p>
+  </div>
+</section>
+
+<section>
+  <div class="scene">
+    <p>If you want, you can write something now.</p>
+    <button onclick="go()">Take a breath & begin</button>
+  </div>
+</section>
+
+<script>
+const h=document.querySelector("#hero h1");
+const p=document.querySelector("#hero p");
+
+if(localStorage.getItem("visited")){
+  h.innerText="Welcome back.";
+  p.innerText="Take your time. This space is still here.";
+}else{
+  h.innerText="Some thoughts are too heavy to carry alone.";
+  p.innerText="This is a quiet place to put them down.";
+  localStorage.setItem("visited","yes");
+}
+
+/* reveal */
+const io=new IntersectionObserver(e=>{
+  e.forEach(x=>x.target.classList.toggle("show",x.isIntersecting));
+},{threshold:.35});
+document.querySelectorAll(".scene").forEach(s=>io.observe(s));
+
+function go(){
+  fade.classList.add("show");
+  setTimeout(()=>location.href="vent.html",600);
+}
+</script>
+</body>
+</html>
