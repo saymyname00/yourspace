@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Your Space</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+:root{
+  --bg:#0f1116;
+  --panel:#151821;
+  --card:#1e2233;
+  --text:#e6e7eb;
+  --muted:#9aa0aa;
+  --primary:#6c8cff;
+  --border:#242836;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:system-ui,-apple-system,Segoe UI,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+}
+
+/* BACKGROUND */
+.bg{
+  position:fixed;
+  inset:0;
+  z-index:-2;
+  background:
+    linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,.8)),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cg fill='none' stroke='%2388aa88' stroke-width='1' opacity='0.3'%3E%3Cpath d='M60 10 C40 30,40 60,60 110'/%3E%3Cpath d='M60 10 C80 30,80 60,60 110'/%3E%3Cpath d='M30 40 C50 50,70 70,90 80'/%3E%3Cpath d='M90 40 C70 50,50 70,30 80'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* LAYOUT */
+.container{
+  max-width:900px;
+  margin:auto;
+  padding:40px 20px 120px;
+}
+
+/* VENT */
+.vent{
+  position:sticky;
+  top:20px;
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:28px;
+  padding:28px;
+  margin-bottom:40px;
+}
+
+textarea{
+  width:100%;
+  border-radius:22px;
+  padding:20px;
+  font-size:16px;
+  border:1px solid var(--border);
+  background:#0b0d13;
+  color:var(--text);
+  resize:none;
+}
+
+/* ACTIONS */
+.actions{
+  display:flex;
+  gap:12px;
+  margin-top:16px;
+}
+.actions button{
+  flex:1;
+  padding:14px;
+  border-radius:22px;
+  border:none;
+  cursor:pointer;
+}
+.post{background:var(--primary);color:#fff}
+.clear{background:#ddd}
+
+/* THOUGHTS */
+.note{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:22px;
+  padding:20px;
+  margin-bottom:20px;
+  animation:noteIn .45s ease;
+}
+@keyframes noteIn{
+  from{opacity:0;transform:translateY(12px)}
+  to{opacity:1;transform:none}
+}
+
+.time{
+  font-size:12px;
+  color:var(--muted);
+  margin-top:6px;
+}
+
+/* REACTIONS */
+.reactions{
+  display:flex;
+  gap:14px;
+  margin-top:10px;
+  font-size:14px;
+  color:var(--muted);
+}
+.reactions span{cursor:pointer}
+
+/* ADMIN */
+.admin{
+  margin-top:10px;
+  font-size:13px;
+  color:var(--primary);
+  cursor:pointer;
+  display:none;
+}
+.note.admin-on .admin{display:block}
+
+/* HIGHLIGHT */
+.highlight{
+  position:absolute;
+  max-width:260px;
+  padding:18px;
+  border-radius:22px;
+  background:rgba(30,40,60,.95);
+  color:#fff;
+  box-shadow:0 0 18px rgba(108,140,255,.6);
+  cursor:grab;
+  animation:highlightIn .35s ease;
+}
+@keyframes highlightIn{
+  from{opacity:0;transform:scale(.96)}
+  to{opacity:1;transform:scale(1)}
+}
+.highlight:active{cursor:grabbing}
+
+.highlight .reactions{
+  color:#cbd5ff;
+}
+</style>
+</head>
+
+<body>
+
+<div class="bg"></div>
+<div id="highlights"></div>
+
+<div class="container">
+
+  <div class="vent">
+    <h3>You’re here.</h3>
+    <textarea id="text" rows="5"
+      placeholder="Start anywhere. Even one line is okay."></textarea>
+    <div class="actions">
+      <button class="post" onclick="save()">Post</button>
+      <button class="clear" onclick="text.value=''">Clear</button>
+    </div>
+  </div>
+
+  <div id="output"></div>
+
+</div>
+
+<script>
+const text=document.getElementById("text");
+const output=document.getElementById("output");
+const highlights=document.getElementById("highlights");
+
+text.focus();
+
+/* ADMIN MODE */
+let admin=false;
+document.addEventListener("keydown",e=>{
+  if(e.ctrlKey && e.shiftKey && e.key==="H"){
+    admin=!admin;
+    document.querySelectorAll(".note")
+      .forEach(n=>n.classList.toggle("admin-on",admin));
+    alert("Admin mode "+(admin?"ON":"OFF"));
+  }
+});
+
+/* LOAD HIGHLIGHTS */
+let saved=JSON.parse(localStorage.getItem("highlights")||"[]");
+saved.forEach(h=>{
+  createHighlight(h.text,h.x,h.y,h.reacts||[0,0,0]);
+});
+
+/* SAVE */
+function save(){
+  if(text.value.trim().length<5) return;
+
+  const d=new Date();
+  const note=document.createElement("div");
+  note.className="note"+(admin?" admin-on":"");
+  note.innerHTML=`
+    ${text.value}
+    <div class="time">${d.toDateString()} · ${d.toLocaleTimeString()}</div>
+    <div class="reactions">
+      <span onclick="react(this)">❤️ 0</span>
+      <span onclick="react(this)">🤍 0</span>
+      <span onclick="react(this)">🫂 0</span>
+    </div>
+    <div class="admin" onclick="highlight(this)">⭐ Highlight</div>
+  `;
+  output.prepend(note);
+  text.value="";
+}
+
+/* EMOJI REACT */
+function react(el){
+  let n=parseInt(el.textContent.split(" ").pop());
+  el.textContent=el.textContent.replace(n,n+1);
+}
+
+/* HIGHLIGHT */
+function highlight(el){
+  const txt=el.parentElement.childNodes[0].textContent;
+  createHighlight(txt,120,120,[0,0,0]);
+  persist();
+}
+
+function createHighlight(text,x,y,reacts){
+  const box=document.createElement("div");
+  box.className="highlight";
+  box.style.left=x+"px";
+  box.style.top=y+"px";
+  box.innerHTML=`
+    <div>${text.slice(0,120)}…</div>
+    <div class="reactions">
+      <span onclick="hReact(this)">❤️ ${reacts[0]}</span>
+      <span onclick="hReact(this)">🤍 ${reacts[1]}</span>
+      <span onclick="hReact(this)">🫂 ${reacts[2]}</span>
+    </div>
+  `;
+  highlights.appendChild(box);
+  makeDraggable(box);
+}
+
+/* HIGHLIGHT EMOJI */
+function hReact(el){
+  let n=parseInt(el.textContent.split(" ").pop());
+  el.textContent=el.textContent.replace(n,n+1);
+  persist();
+}
+
+/* DRAG */
+function makeDraggable(el){
+  let ox,oy;
+  el.onmousedown=e=>{
+    ox=e.clientX-el.offsetLeft;
+    oy=e.clientY-el.offsetTop;
+    document.onmousemove=m=>{
+      el.style.left=(m.clientX-ox)+"px";
+      el.style.top=(m.clientY-oy)+"px";
+    };
+    document.onmouseup=()=>{
+      document.onmousemove=null;
+      persist();
+    };
+  };
+}
+
+/* SAVE */
+function persist(){
+  const arr=[];
+  document.querySelectorAll(".highlight").forEach(h=>{
+    const reacts=[...h.querySelectorAll(".reactions span")]
+      .map(s=>parseInt(s.textContent.split(" ").pop()));
+    arr.push({
+      text:h.childNodes[0].textContent,
+      x:h.offsetLeft,
+      y:h.offsetTop,
+      reacts
+    });
+  });
+  localStorage.setItem("highlights",JSON.stringify(arr));
+}
+</script>
+
+</body>
+</html>
